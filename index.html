@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e1a">
+<title>3D Khảo sát Đông Pao - Việt Nam</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0e1a; color: #e0e6f0;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #canvas-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+  }
+  canvas { display: block; touch-action: none; }
+
+  /* ========== TOP BAR ========== */
+  #top-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    display: flex; justify-content: space-between; align-items: flex-start;
+    z-index: 10; pointer-events: none;
+    background: linear-gradient(180deg, rgba(10,14,26,0.9) 0%, rgba(10,14,26,0) 100%);
+    gap: 8px;
+  }
+  #top-bar > * { pointer-events: auto; }
+
+  .icon-btn {
+    width: 42px; height: 42px;
+    background: rgba(20, 29, 48, 0.92);
+    border: 1px solid #2a3a5a;
+    color: #4da6ff; border-radius: 10px;
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.15s, background 0.15s;
+    flex-shrink: 0;
+    font-family: inherit;
+  }
+  .icon-btn:active { background: #1e3a5f; transform: scale(0.94); }
+
+  #top-title {
+    flex: 1; margin: 0; text-align: center;
+    background: rgba(20, 29, 48, 0.85);
+    border: 1px solid #2a3a5a; border-radius: 10px;
+    padding: 7px 8px; min-width: 0;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #top-title .t1 {
+    font-size: 11px; font-weight: 700; color: #4da6ff;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #top-title .t2 {
+    font-size: 9px; color: #6b8ab5; margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ========== VIEW BUTTONS ========== */
+  #view-scroller {
+    position: fixed;
+    top: calc(62px + env(safe-area-inset-top, 0px));
+    left: 0; right: 0; z-index: 9;
+    padding: 0 12px;
+    overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; pointer-events: auto;
+  }
+  #view-scroller::-webkit-scrollbar { display: none; }
+  #view-buttons {
+    display: flex; gap: 8px; padding-bottom: 10px;
+    width: max-content;
+  }
+  .view-btn {
+    background: rgba(20, 29, 48, 0.92);
+    border: 1px solid #2a3a5a; color: #8ba8c8;
+    padding: 9px 16px; border-radius: 20px;
+    cursor: pointer; font-size: 12px; font-weight: 600;
+    white-space: nowrap;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.15s, background 0.15s, color 0.15s;
+    font-family: inherit;
+  }
+  .view-btn:active { transform: scale(0.95); }
+  .view-btn.active {
+    background: #1e3a5f; border-color: #4da6ff; color: #4da6ff;
+  }
+
+  /* ========== ZOOM CONTROLS ========== */
+  #zoom-controls {
+    position: fixed; right: 12px;
+    bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    z-index: 9;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #zoom-controls .icon-btn {
+    width: 40px; height: 40px; font-size: 20px; font-weight: 300;
+  }
+
+  /* ========== LAYER FAB ========== */
+  #layer-fab {
+    position: fixed; right: 12px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    z-index: 9;
+  }
+  #layer-fab .icon-btn { font-size: 16px; }
+
+  /* ========== BOTTOM SHEET ========== */
+  #sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg, #0f1628 0%, #0a0e1a 100%);
+    border-top: 1px solid #1e2d4a;
+    border-radius: 20px 20px 0 0;
+    z-index: 20;
+    max-height: 80vh;
+    transform: translateY(calc(100% - 56px));
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  #sheet.open { transform: translateY(0); }
+
+  #sheet-handle {
+    padding: 8px 16px 10px;
+    cursor: pointer; flex-shrink: 0;
+  }
+  #sheet-handle::before {
+    content: ''; display: block;
+    width: 40px; height: 4px;
+    background: #4da6ff; border-radius: 2px;
+    margin: 0 auto 8px; opacity: 0.5;
+  }
+  #sheet-header {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  #sheet-header h2 {
+    font-size: 13px; color: #4da6ff; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  #sheet-header .chev {
+    color: #4da6ff; font-size: 12px;
+    transition: transform 0.3s;
+  }
+  #sheet.open #sheet-header .chev { transform: rotate(180deg); }
+
+  #sheet-body {
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 0 16px 20px;
+    overscroll-behavior: contain;
+  }
+  #sheet-body::-webkit-scrollbar { width: 4px; }
+  #sheet-body::-webkit-scrollbar-thumb { background: #2a3a5a; border-radius: 2px; }
+
+  /* ========== TABS ========== */
+  .tab-bar {
+    display: flex; gap: 4px; padding: 4px 0 12px;
+    border-bottom: 1px solid #141d30; margin-bottom: 12px;
+    position: sticky; top: 0;
+    background: linear-gradient(180deg, #0f1628 80%, rgba(15,22,40,0) 100%);
+    z-index: 2;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 1; min-width: 70px;
+    padding: 8px 6px;
+    background: transparent; border: none;
+    color: #6b8ab5; font-size: 11px; font-weight: 600;
+    border-radius: 8px; cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .tab-btn.active { background: #1e3a5f; color: #4da6ff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.2s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ========== INFO ROWS ========== */
+  .info-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 9px 0; font-size: 12px;
+    border-bottom: 1px solid #141d30; gap: 12px;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #6b8ab5; flex-shrink: 0; }
+  .info-value {
+    color: #e0e6f0; font-weight: 600; text-align: right;
+    word-break: break-word;
+  }
+  .info-value.highlight { color: #ff9500; }
+  .info-value.green { color: #34d399; }
+
+  /* ========== CARDS ========== */
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin: 8px 0 12px;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, #141d30, #0f1628);
+    border: 1px solid #1e2d4a; border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .stat-card .value {
+    font-size: 17px; font-weight: 700; color: #4da6ff;
+    line-height: 1.2;
+  }
+  .stat-card .label {
+    font-size: 10px; color: #6b8ab5;
+    margin-top: 3px; line-height: 1.3;
+  }
+  .stat-card.full { grid-column: 1 / -1; }
+
+  /* ========== TABLE ========== */
+  .table-wrap {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    margin: 8px 0; border-radius: 8px;
+    border: 1px solid #1e2d4a;
+  }
+  table.data-table {
+    width: 100%; border-collapse: collapse; font-size: 11px;
+    min-width: 480px;
+  }
+  table.data-table th {
+    background: #141d30; color: #4da6ff; padding: 8px 6px;
+    text-align: center; font-weight: 600; font-size: 10px;
+    border-bottom: 1px solid #1e2d4a; white-space: nowrap;
+  }
+  table.data-table td {
+    padding: 7px 6px; text-align: center;
+    border-bottom: 1px solid #0f1628;
+    color: #c0cfe0; white-space: nowrap;
+  }
+  table.data-table tr:last-child td { border-bottom: none; }
+  table.data-table tr:nth-child(even) td { background: rgba(20,29,48,0.3); }
+  table.data-table td.highlight { color: #ff9500; font-weight: 700; }
+
+  /* ========== LEGEND ========== */
+  .legend-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; font-size: 12px;
+    border-bottom: 1px solid #141d30;
+  }
+  .legend-item:last-child { border-bottom: none; }
+  .legend-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.25); flex-shrink: 0;
+  }
+
+  /* ========== LAYER PANEL MODAL ========== */
+  #layer-panel {
+    position: fixed; inset: 0;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 30; display: none;
+    padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    align-items: center; justify-content: center;
+  }
+  #layer-panel.open { display: flex; }
+  #layer-panel-inner {
+    background: linear-gradient(180deg, #141d30, #0f1628);
+    border: 1px solid #1e2d4a; border-radius: 16px;
+    padding: 20px; width: 100%; max-width: 340px;
+    max-height: 80vh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #layer-panel-inner h3 {
+    font-size: 13px; color: #4da6ff;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 14px; text-align: center;
+  }
+  .layer-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; font-size: 13px;
+    border-bottom: 1px solid #141d30; cursor: pointer;
+    gap: 12px;
+  }
+  .layer-toggle:last-of-type { border-bottom: none; }
+  .layer-toggle span { color: #c0cfe0; }
+
+  .switch {
+    position: relative; width: 44px; height: 24px;
+    background: #2a3a5a; border-radius: 12px;
+    transition: background 0.3s; flex-shrink: 0;
+  }
+  .switch::after {
+    content: ''; position: absolute;
+    top: 2px; left: 2px; width: 20px; height: 20px;
+    background: #6b8ab5; border-radius: 50%;
+    transition: left 0.3s, background 0.3s;
+  }
+  input[type="checkbox"] { display: none; }
+  input:checked + .switch { background: #1e3a5f; }
+  input:checked + .switch::after {
+    left: 22px; background: #4da6ff;
+    box-shadow: 0 0 8px rgba(77,166,255,0.6);
+  }
+
+  .close-btn {
+    width: 100%; padding: 12px; margin-top: 16px;
+    background: #1e3a5f; border: 1px solid #4da6ff;
+    color: #4da6ff; border-radius: 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: inherit;
+  }
+  .close-btn:active { background: #2a4a7f; }
+
+  /* ========== INFO POPUP ========== */
+  #info-popup {
+    position: fixed;
+    background: rgba(20, 29, 48, 0.97);
+    border: 1px solid #4da6ff; border-radius: 12px;
+    padding: 12px 16px; font-size: 12px;
+    display: none; z-index: 40;
+    max-width: 260px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    pointer-events: none;
+  }
+  #info-popup.show { display: block; animation: popIn 0.2s; }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  #info-popup .popup-title {
+    color: #4da6ff; font-weight: 700;
+    margin-bottom: 6px; font-size: 13px;
+  }
+  #info-popup .popup-row {
+    color: #c0cfe0; line-height: 1.7;
+  }
+  #info-popup .popup-row span { color: #ff9500; font-weight: 700; }
+
+  /* ========== SCALE & COMPASS ========== */
+  #scale-bar {
+    position: fixed;
+    left: 12px; bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    background: rgba(20, 29, 48, 0.9);
+    border: 1px solid #1e2d4a; border-radius: 8px;
+    padding: 5px 10px; font-size: 10px; color: #6b8ab5;
+    z-index: 5; display: flex; align-items: center; gap: 6px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  #scale-line {
+    width: 50px; height: 5px;
+    border-left: 2px solid #4da6ff;
+    border-right: 2px solid #4da6ff;
+    border-bottom: 2px solid #4da6ff;
+  }
+
+  #compass {
+    position: fixed;
+    right: 12px;
+    top: calc(115px + env(safe-area-inset-top, 0px));
+    width: 44px; height: 44px; z-index: 5;
+    pointer-events: none;
+  }
+
+  /* ========== LOADING ========== */
+  #loading {
+    position: fixed; inset: 0;
+    background: #0a0e1a;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+    z-index: 100; transition: opacity 0.5s;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 38px; height: 38px;
+    border: 3px solid #1e2d4a; border-top-color: #4da6ff;
+    border-radius: 50%; animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading .text {
+    color: #6b8ab5; font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* ========== ERROR ========== */
+  #error-msg {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    padding: 20px; z-index: 200;
+    background: #0a0e1a;
+  }
+  #error-msg.show { display: flex; }
+  #error-msg .box {
+    max-width: 400px; text-align: center;
+    background: #141d30; border: 1px solid #ff3b30;
+    border-radius: 12px; padding: 24px;
+  }
+  #error-msg h3 {
+    color: #ff3b30; font-size: 14px; margin-bottom: 8px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  #error-msg p { color: #c0cfe0; font-size: 12px; line-height: 1.6; }
+
+  /* ========== DESKTOP ========== */
+  @media (min-width: 769px) {
+    #sheet {
+      left: auto; right: 16px; bottom: 16px;
+      width: 380px; max-height: calc(100vh - 32px);
+      border-radius: 16px; border: 1px solid #1e2d4a;
+      transform: translateY(0);
+    }
+    #sheet:not(.open) { transform: translateY(calc(100% - 56px)); }
+    #view-scroller { left: 16px; right: auto; width: auto; }
+    #zoom-controls { bottom: 80px; }
+    #layer-fab { bottom: 32px; }
+    #scale-bar { bottom: 32px; }
+    #compass { top: 80px; right: 16px; }
+  }
+
+  @media (max-height: 500px) and (orientation: landscape) {
+    #sheet { max-height: 90vh; }
+    #sheet.open { transform: translateY(0); }
+    #view-scroller { top: calc(54px + env(safe-area-inset-top, 0px)); }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="text">Đang tải dữ liệu địa chất...</div>
+</div>
+
+<div id="error-msg">
+  <div class="box">
+    <h3>Không thể hiển thị 3D</h3>
+    <p>Trình duyệt của bạn không hỗ trợ WebGL hoặc đã tắt tính năng này. Vui lòng thử lại với Chrome, Safari hoặc Firefox phiên bản mới.</p>
+  </div>
+</div>
+
+<div id="canvas-container"></div>
+
+<!-- TOP BAR -->
+<div id="top-bar">
+  <button class="icon-btn" id="btn-layers" aria-label="Lớp hiển thị">☰</button>
+  <div id="top-title">
+    <div class="t1">Khảo sát Đông Pao</div>
+    <div class="t2">JICA · MMAJ · VIMICO · 2000-2001</div>
+  </div>
+  <button class="icon-btn" id="btn-reset" aria-label="Đặt lại">⟳</button>
+</div>
+
+<!-- VIEW BUTTONS -->
+<div id="view-scroller">
+  <div id="view-buttons">
+    <button class="view-btn active" data-view="overview">Tổng quan</button>
+    <button class="view-btn" data-view="f3">Thân quặng F3</button>
+    <button class="view-btn" data-view="cross">Mặt cắt</button>
+    <button class="view-btn" data-view="drill">Lỗ khoan</button>
+    <button class="view-btn" data-view="top">Từ trên cao</button>
+  </div>
+</div>
+
+<!-- COMPASS -->
+<svg id="compass" viewBox="0 0 44 44" aria-hidden="true">
+  <circle cx="22" cy="22" r="19" fill="rgba(20,29,48,0.85)" stroke="#1e2d4a" stroke-width="1"/>
+  <polygon points="22,6 25,22 22,19 19,22" fill="#ff3b30"/>
+  <polygon points="22,38 19,22 22,25 25,22" fill="#4da6ff"/>
+  <text x="22" y="15" text-anchor="middle" fill="#ff3b30" font-size="7" font-weight="bold">N</text>
+</svg>
+
+<!-- SCALE -->
+<div id="scale-bar">
+  <div id="scale-line"></div>
+  <span id="scale-text">200 m</span>
+</div>
+
+<!-- ZOOM CONTROLS -->
+<div id="zoom-controls">
+  <button class="icon-btn" id="btn-zoom-in" aria-label="Phóng to">+</button>
+  <button class="icon-btn" id="btn-zoom-out" aria-label="Thu nhỏ">−</button>
+</div>
+
+<!-- LAYER FAB -->
+<div id="layer-fab">
+  <button class="icon-btn" id="btn-layers2" aria-label="Lớp hiển thị">◧</button>
+</div>
+
+<!-- BOTTOM SHEET -->
+<div id="sheet">
+  <div id="sheet-handle">
+    <div id="sheet-header">
+      <h2>Thông tin khảo sát</h2>
+      <span class="chev">▲</span>
+    </div>
+  </div>
+  <div id="sheet-body">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="overview">Tổng quan</button>
+      <button class="tab-btn" data-tab="reserve">Trữ lượng</button>
+      <button class="tab-btn" data-tab="drill">Khoan</button>
+      <button class="tab-btn" data-tab="process">Tuyển nổi</button>
+      <button class="tab-btn" data-tab="legend">Chú thích</button>
+    </div>
+
+    <!-- TAB: TỔNG QUAN -->
+    <div class="tab-content active" data-tab="overview">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="value">11 km²</div>
+          <div class="label">Diện tích khảo sát</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">23 lỗ</div>
+          <div class="label">Tổng lỗ khoan</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">2.300 m</div>
+          <div class="label">Tổng mét khoan</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">700-1133m</div>
+          <div class="label">Cao độ địa hình</div>
+        </div>
+      </div>
+
+      <div class="info-row"><span class="info-label">Quốc gia</span><span class="info-value">Việt Nam</span></div>
+      <div class="info-row"><span class="info-label">Tỉnh</span><span class="info-value">Lai Châu</span></div>
+      <div class="info-row"><span class="info-label">Cách Hà Nội</span><span class="info-value">~300 km TB</span></div>
+      <div class="info-row"><span class="info-label">Cách Lào Cai</span><span class="info-value">47,5 km TT</span></div>
+      <div class="info-row"><span class="info-label">Đơn vị</span><span class="info-value">JICA + MMAJ</span></div>
+      <div class="info-row"><span class="info-label">Phối hợp</span><span class="info-value">VIMICO</span></div>
+      <div class="info-row"><span class="info-label">Thân quặng chính</span><span class="info-value highlight">F3, F7, F9, F10</span></div>
+      <div class="info-row"><span class="info-label">Khoáng vật chính</span><span class="info-value">Bastnaesite</span></div>
+      <div class="info-row"><span class="info-label">Cấu trúc chính</span><span class="info-value">Đứt gãy TB-ĐN</span></div>
+    </div>
+
+    <!-- TAB: TRỮ LƯỢNG -->
+    <div class="tab-content" data-tab="reserve">
+      <div class="stat-grid">
+        <div class="stat-card full">
+          <div class="value">765.156 tấn</div>
+          <div class="label">Trữ lượng quặng tại cut-off 8% RE₂O₃</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Cut-off<br>%</th>
+              <th>Quặng<br>(tấn)</th>
+              <th>RE₂O₃<br>%</th>
+              <th>CaF₂<br>%</th>
+              <th>BaSO₄<br>%</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>3</td><td>7.374.617</td><td>5,23</td><td>9,87</td><td>34,50</td></tr>
+            <tr><td>4</td><td>4.766.256</td><td>6,19</td><td>12,06</td><td>34,01</td></tr>
+            <tr><td>5</td><td>3.175.249</td><td>7,06</td><td>12,80</td><td>34,97</td></tr>
+            <tr><td>6</td><td>2.051.446</td><td>7,93</td><td>13,59</td><td>35,40</td></tr>
+            <tr><td>7</td><td>1.354.549</td><td>8,69</td><td>14,24</td><td>36,16</td></tr>
+            <tr><td class="highlight">8</td><td class="highlight">765.156</td><td class="highlight">9,63</td><td class="highlight">12,74</td><td class="highlight">39,72</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="info-row"><span class="info-label">Mô hình khối</span><span class="info-value">20 × 20 × 5 m</span></div>
+      <div class="info-row"><span class="info-label">Tỷ trọng áp dụng</span><span class="info-value">2,6</span></div>
+      <div class="info-row"><span class="info-label">Kéo dài Đ-T</span><span class="info-value">~150 m</span></div>
+      <div class="info-row"><span class="info-label">Kéo dài B-N</span><span class="info-value">~400 m</span></div>
+
+      <h4 style="color:#4da6ff; font-size:11px; margin:16px 0 6px; letter-spacing:1px; text-transform:uppercase;">Phân đới cấp độ</h4>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ff3b30;"></div>
+        <span>Cao cấp: ≥10% RE₂O₃</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ff9500;"></div>
+        <span>Trung cấp: 5-10% RE₂O₃</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ffcc00;"></div>
+        <span>Thấp cấp: &lt;5% RE₂O₃</span>
+      </div>
+    </div>
+
+    <!-- TAB: KHOAN -->
+    <div class="tab-content" data-tab="drill">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="value">23</div>
+          <div class="label">Tổng lỗ khoan</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">2.300 m</div>
+          <div class="label">Tổng chiều dài</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" style="color:#34d399;">8 lỗ</div>
+          <div class="label">Đạt ≥10% RE₂O₃</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" style="color:#ff9500;">5 lỗ</div>
+          <div class="label">Đạt 5-10% RE₂O₃</div>
+        </div>
+      </div>
+
+      <h4 style="color:#4da6ff; font-size:11px; margin:12px 0 6px; letter-spacing:1px; text-transform:uppercase;">Danh sách lỗ khoan</h4>
+      <div id="drill-list"></div>
+    </div>
+
+    <!-- TAB: TUYỂN NỔI -->
+    <div class="tab-content" data-tab="process">
+      <div class="info-row"><span class="info-label">Giai đoạn 1</span><span class="info-value" style="color:#ff3b30;">Thất bại</span></div>
+      <div class="info-row"><span class="info-label">Giai đoạn 2</span><span class="info-value green;">Thành công</span></div>
+      <div class="info-row"><span class="info-label">Quy trình mới</span><span class="info-value">Barite → Fluorite → Đất hiếm</span></div>
+
+      <div class="stat-grid" style="margin-top:12px;">
+        <div class="stat-card">
+          <div class="value">50%</div>
+          <div class="label">Thu hồi → Tinh quặng 50% RE₂O₃</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">70%</div>
+          <div class="label">Thu hồi → Tinh quặng 40% RE₂O₃</div>
+        </div>
+      </div>
+
+      <h4 style="color:#4da6ff; font-size:11px; margin:16px 0 6px; letter-spacing:1px; text-transform:uppercase;">Đánh giá kinh tế sơ bộ</h4>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="value">~3.000 t/n</div>
+          <div class="label">RE₂O₃ trong tinh quặng</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">~13 năm</div>
+          <div class="label">Tuổi thọ mỏ dự kiến</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">$15 tr</div>
+          <div class="label">Đầu tư ban đầu</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">~16%/năm</div>
+          <div class="label">Tỷ suất hoàn vốn</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CHÚ THÍCH -->
+    <div class="tab-content" data-tab="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ff3b30;"></div>
+        <span>Thân quặng cao cấp (≥10% RE₂O₃)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ff9500;"></div>
+        <span>Thân quặng trung cấp (5-10% RE₂O₃)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ffcc00;"></div>
+        <span>Thân quặng thấp cấp (&lt;5% RE₂O₃)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#00d4ff;"></div>
+        <span>Lỗ khoan (màu theo cấp độ)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#1e90ff;"></div>
+        <span>Sông, suối (Nậm Hon, Đông Pao)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ffcc00; opacity:0.7;"></div>
+        <span>Ranh giới khu vực dự án</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#4a7c59;"></div>
+        <span>Địa hình đồi núi karst</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ff6b35;"></div>
+        <span>Thân quặng F7</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ffd700;"></div>
+        <span>Thân quặng F9</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ff69b4;"></div>
+        <span>Thân quặng F10</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LAYER PANEL MODAL -->
+<div id="layer-panel">
+  <div id="layer-panel-inner">
+    <h3>Hiển thị lớp</h3>
+
+    <label class="layer-toggle">
+      <span>Địa hình</span>
+      <input type="checkbox" checked data-layer="terrain">
+      <div class="switch"></div>
+    </label>
+    <label class="layer-toggle">
+      <span>Ranh giới dự án</span>
+      <input type="checkbox" checked data-layer="boundary">
+      <div class="switch"></div>
+    </label>
+    <label class="layer-toggle">
+      <span>Thân quặng F3</span>
+      <input type="checkbox" checked data-layer="orebody">
+      <div class="switch"></div>
+    </label>
+    <label class="layer-toggle">
+      <span>Thân quặng phụ (F7, F9, F10)</span>
+      <input type="checkbox" checked data-layer="orebodyOther">
+      <div class="switch"></div>
+    </label>
+    <label class="layer-toggle">
+      <span>Lỗ khoan</span>
+      <input type="checkbox" checked data-layer="drill">
+      <div class="switch"></div>
+    </label>
+    <label class="layer-toggle">
+      <span>Sông, suối</span>
+      <input type="checkbox" checked data-layer="rivers">
+      <div class="switch"></div>
+    </label>
+    <label class="layer-toggle">
+      <span>Nhãn địa danh</span>
+      <input type="checkbox" checked data-layer="labels">
+      <div class="switch"></div>
+    </label>
+    <label class="layer-toggle">
+      <span>Lưới tọa độ</span>
+      <input type="checkbox" checked data-layer="grid">
+      <div class="switch"></div>
+    </label>
+
+    <button class="close-btn" id="btn-close-layers">Đóng</button>
+  </div>
+</div>
+
+<!-- INFO POPUP -->
+<div id="info-popup">
+  <div class="popup-title"></div>
+  <div class="popup-row"></div>
+</div>
+
+<!-- THREE.JS + ORBITCONTROLS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+(function () {
+'use strict';
+
+// ============================================================
+// KHẢO SÁT KHOÁNG SẢN ĐÔNG PAO - MÔ PHỎNG 3D
+// Dữ liệu: Báo cáo JICA-MMAJ 2002
+// ============================================================
+
+// ---------- PHÁT HIỆN THIẾT BỊ ----------
+var isMobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent) ||
+               (window.innerWidth < 769 && 'ontouchstart' in window);
+var LOW_POWER = isMobile || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+
+// ---------- KIỂM TRA WEBGL ----------
+function hasWebGL() {
+  try {
+    var c = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext &&
+              (c.getContext('webgl') || c.getContext('experimental-webgl')));
+  } catch (e) { return false; }
+}
+
+if (!hasWebGL() || typeof THREE === 'undefined') {
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('error-msg').classList.add('show');
+  return;
+}
+
+// ---------- CẤU HÌNH ----------
+var CONFIG = {
+  colors: {
+    bg: 0x0a0e1a,
+    highGrade: 0xff3b30,
+    medGrade: 0xff9500,
+    lowGrade: 0xffcc00,
+    drillHigh: 0xff3b30,
+    drillMed: 0xff9500,
+    drillLow: 0xffcc00,
+    river: 0x1e90ff,
+    boundary: 0xffcc00,
+    grid: 0x1e2d4a,
+    f7: 0xff6b35,
+    f9: 0xffd700,
+    f10: 0xff69b4
+  }
+};
+
+// ---------- DỮ LIỆU ----------
+var PROJECT_CORNERS = [
+  { name: 'Đông Bắc', x: 287, z: -4041 },
+  { name: 'Đông Nam', x: 2250, z: -899 },
+  { name: 'Tây Nam', x: -318, z: 645 },
+  { name: 'Tây Bắc', x: -2280, z: -2505 }
+];
+
+var F3_ZONES = {
+  low:    { rx: 180, rz: 450, depth: 5,  thickness: 40, color: CONFIG.colors.lowGrade, opacity: 0.45 },
+  medium: { rx: 120, rz: 320, depth: 15, thickness: 35, color: CONFIG.colors.medGrade, opacity: 0.65 },
+  high:   { rx: 80,  rz: 200, depth: 25, thickness: 30, color: CONFIG.colors.highGrade, opacity: 0.85 }
+};
+
+var OTHER_ORES = [
+  { name: 'F7',  x: -350, z: -200, rx: 120, rz: 250, color: CONFIG.colors.f7,  elevation: 920 },
+  { name: 'F9',  x: 280,  z: -450, rx: 80,  rz: 150, color: CONFIG.colors.f9,  elevation: 880 },
+  { name: 'F10', x: -180, z: -550, rx: 60,  rz: 100, color: CONFIG.colors.f10, elevation: 900 },
+  { name: 'F1',  x: 450,  z: 200,  rx: 50,  rz: 80,  color: 0x9b59b6, elevation: 850 },
+  { name: 'F4',  x: -500, z: 300,  rx: 45,  rz: 70,  color: 0x7f8c8d, elevation: 860 }
+];
+
+// ---------- ĐỊA HÌNH ----------
+function getTerrainHeight(x, z) {
+  var h = 900;
+  h += Math.max(0, z / 1000) * 180;
+  h += Math.max(0, -z / 2000) * 50;
+  h += Math.sin(x * 0.004) * 35 + Math.cos(z * 0.0035) * 30;
+  h += Math.sin(x * 0.012 + z * 0.01) * 18;
+  h += Math.cos(x * 0.02 - z * 0.015) * 10;
+  h += Math.sin(x * 0.035 + z * 0.03) * 5;
+  return Math.max(700, Math.min(1133, h));
+}
+
+// ---------- SINH 23 LỖ KHOAN ----------
+var DRILL_HOLES = (function () {
+  var arr = [];
+  var seed = 12345;
+  function rand() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+
+  var positions = [
+    [0, 0], [-30, -50], [30, -50], [-30, 50], [30, 50],
+    [-60, -100], [60, -100], [-60, 100], [60, 100],
+    [0, -150], [0, 150], [-90, -30], [90, -30],
+    [-90, 70], [90, 70], [-120, -180], [120, -180],
+    [-120, 180], [120, 180], [0, -250], [0, 250],
+    [-50, -300], [50, -300]
+  ];
+
+  positions.forEach(function (p, i) {
+    var jitterX = (rand() - 0.5) * 15;
+    var jitterZ = (rand() - 0.5) * 15;
+    var x = p[0] + jitterX;
+    var z = p[1] + jitterZ;
+    var depth = 50 + rand() * 120;
+    var grade = rand();
+    var gradeType, gradeColor, gradeLabel;
+
+    if (grade > 0.65) {
+      gradeType = 'high'; gradeColor = CONFIG.colors.drillHigh; gradeLabel = '≥10% RE₂O₃';
+    } else if (grade > 0.35) {
+      gradeType = 'medium'; gradeColor = CONFIG.colors.drillMed; gradeLabel = '5-10% RE₂O₃';
+    } else {
+      gradeType = 'low'; gradeColor = CONFIG.colors.drillLow; gradeLabel = '<5% RE₂O₃';
+    }
+
+    arr.push({
+      id: 'MJVD-' + (17 + i),
+      x: x, z: z, depth: depth,
+      gradeType: gradeType, gradeColor: gradeColor, gradeLabel: gradeLabel,
+      reo: (3 + rand() * 12).toFixed(2),
+      surfaceElev: getTerrainHeight(x, z)
+    });
+  });
+  return arr;
+})();
+
+// ---------- BIẾN TOÀN CỤC ----------
+var scene, camera, renderer, controls;
+var layers = {};
+var raycaster, pointer;
+var hoveredObject = null;
+var clock;
+var cameraAnimRAF = null;
+var popupTimer = null;
+
+// ---------- KHỞI TẠO ----------
+function init() {
+  clock = new THREE.Clock();
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(CONFIG.colors.bg);
+  scene.fog = new THREE.FogExp2(CONFIG.colors.bg, LOW_POWER ? 0.0005 : 0.00035);
+
+  var aspect = window.innerWidth / window.innerHeight;
+  camera = new THREE.PerspectiveCamera(50, aspect, 1, 20000);
+  camera.position.set(1200, 1300, 1800);
+  camera.lookAt(0, 850, 0);
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: !LOW_POWER,
+    alpha: false,
+    powerPreference: 'high-performance'
+  });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, LOW_POWER ? 1.5 : 2));
+  if (!LOW_POWER) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  }
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // OrbitControls - an toàn nếu không load được
+  if (typeof THREE.OrbitControls === 'function') {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.target.set(0, 850, 0);
+    controls.maxPolarAngle = Math.PI / 2.1;
+    controls.minDistance = 150;
+    controls.maxDistance = 6000;
+    controls.enablePan = true;
+    controls.panSpeed = 0.8;
+    controls.rotateSpeed = 0.6;
+    controls.zoomSpeed = 1.2;
+    controls.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN
+    };
+  } else {
+    console.warn('OrbitControls chưa được tải. Camera sẽ không tương tác được.');
+  }
+
+  raycaster = new THREE.Raycaster();
+  pointer = new THREE.Vector2();
+
+  setupLights();
+  buildTerrain();
+  buildProjectBoundary();
+  buildOreBodies();
+  buildDrillHoles();
+  buildRivers();
+  buildGrid();
+  buildLabels();
+
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', function () { setTimeout(onResize, 300); });
+
+  // Tương tác pointer
+  var canvas = renderer.domElement;
+  canvas.addEventListener('pointerdown', onPointerDown, { passive: true });
+  document.addEventListener('pointerup', onPointerUp, { passive: true });
+  canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+  canvas.addEventListener('pointerleave', function () {
+    if (!isMobile) {
+      resetHover();
+      hidePopup();
+    }
+  });
+
+  setupUI();
+  populateDrillList();
+
+  setTimeout(function () {
+    document.getElementById('loading').classList.add('hidden');
+  }, 600);
+
+  animate();
+}
+
+// ---------- ÁNH SÁNG ----------
+function setupLights() {
+  scene.add(new THREE.AmbientLight(0x506080, LOW_POWER ? 1.0 : 0.85));
+
+  var sun = new THREE.DirectionalLight(0xfff5e0, 1.1);
+  sun.position.set(800, 1500, -600);
+  if (!LOW_POWER) {
+    sun.castShadow = true;
+    sun.shadow.mapSize.width = 1024;
+    sun.shadow.mapSize.height = 1024;
+    sun.shadow.camera.near = 100;
+    sun.shadow.camera.far = 5000;
+    sun.shadow.camera.left = -2000;
+    sun.shadow.camera.right = 2000;
+    sun.shadow.camera.top = 2000;
+    sun.shadow.camera.bottom = -2000;
+  }
+  scene.add(sun);
+
+  var fill = new THREE.DirectionalLight(0x4da6ff, 0.35);
+  fill.position.set(-500, 300, 800);
+  scene.add(fill);
+}
+
+// ---------- ĐỊA HÌNH ----------
+function buildTerrain() {
+  var size = 6000;
+  var segments = LOW_POWER ? 80 : 140;
+  var geo = new THREE.PlaneGeometry(size, size, segments, segments);
+  geo.rotateX(-Math.PI / 2);
+
+  var positions = geo.attributes.position;
+  var colors = [];
+
+  for (var i = 0; i < positions.count; i++) {
+    var x = positions.getX(i);
+    var z = positions.getZ(i);
+    var h = getTerrainHeight(x, z);
+    positions.setY(i, h);
+
+    var t = (h - 700) / (1133 - 700);
+    var color;
+    if (t < 0.3) color = new THREE.Color(0x2d5a3d);
+    else if (t < 0.6) color = new THREE.Color(0x4a7c59);
+    else if (t < 0.8) color = new THREE.Color(0x6b8e6b);
+    else color = new THREE.Color(0x8b7d6b);
+
+    colors.push(color.r, color.g, color.b);
+  }
+
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+
+  var mat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.9,
+    metalness: 0.05,
+    side: THREE.FrontSide
+  });
+
+  var terrain = new THREE.Mesh(geo, mat);
+  terrain.receiveShadow = !LOW_POWER;
+  layers.terrain = terrain;
+  scene.add(terrain);
+}
+
+// ---------- RANH GIỚI DỰ ÁN ----------
+function buildProjectBoundary() {
+  var group = new THREE.Group();
+  var points = PROJECT_CORNERS.map(function (c) {
+    return new THREE.Vector3(c.x, getTerrainHeight(c.x, c.z) + 5, c.z);
+  });
+  points.push(points[0]);
+
+  var geo = new THREE.BufferGeometry().setFromPoints(points);
+  var mat = new THREE.LineBasicMaterial({
+    color: CONFIG.colors.boundary,
+    transparent: true,
+    opacity: 0.75
+  });
+  group.add(new THREE.Line(geo, mat));
+
+  PROJECT_CORNERS.forEach(function (c) {
+    var h = getTerrainHeight(c.x, c.z);
+    var pillarGeo = new THREE.CylinderGeometry(3, 3, 30, 6);
+    var pillarMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.boundary,
+      emissive: CONFIG.colors.boundary,
+      emissiveIntensity: 0.3
+    });
+    var pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    pillar.position.set(c.x, h + 15, c.z);
+    group.add(pillar);
+  });
+
+  layers.boundary = group;
+  scene.add(group);
+}
+
+// ---------- TẠO HÌNH DẠNG THÂN QUẶNG ----------
+function createOreShape(rx, rz, seed, irregularity) {
+  var points = [];
+  var n = LOW_POWER ? 20 : 32;
+  for (var i = 0; i < n; i++) {
+    var angle = (i / n) * Math.PI * 2;
+    var r = 1;
+    r += Math.sin(angle * 3 + seed) * irregularity;
+    r += Math.cos(angle * 5 + seed * 1.7) * irregularity * 0.5;
+    r += Math.sin(angle * 7 + seed * 2.3) * irregularity * 0.25;
+    points.push(new THREE.Vector2(
+      Math.cos(angle) * rx * r,
+      Math.sin(angle) * rz * r
+    ));
+  }
+  return points;
+}
+
+// ---------- THÂN QUẶNG ----------
+function buildOreBodies() {
+  var group = new THREE.Group();
+  var surfaceY = getTerrainHeight(0, 0);
+
+  // F3
+  var f3Group = new THREE.Group();
+  Object.keys(F3_ZONES).forEach(function (key, idx) {
+    var zone = F3_ZONES[key];
+    var pts = createOreShape(zone.rx, zone.rz, idx + 1, 0.15);
+    var shape = new THREE.Shape();
+    shape.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y);
+    shape.closePath();
+
+    var geo = new THREE.ExtrudeGeometry(shape, {
+      depth: zone.thickness,
+      bevelEnabled: true,
+      bevelThickness: 3,
+      bevelSize: 3,
+      bevelSegments: LOW_POWER ? 1 : 2,
+      curveSegments: LOW_POWER ? 6 : 12
+    });
+    geo.rotateX(-Math.PI / 2);
+
+    var mat = new THREE.MeshStandardMaterial({
+      color: zone.color,
+      emissive: zone.color,
+      emissiveIntensity: 0.25,
+      transparent: true,
+      opacity: zone.opacity,
+      roughness: 0.55,
+      metalness: 0.2,
+      side: THREE.DoubleSide
+    });
+
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.y = surfaceY - zone.depth - zone.thickness;
+    mesh.castShadow = !LOW_POWER;
+    mesh.userData = {
+      type: 'ore',
+      name: 'F3 - ' + (key === 'high' ? 'Cao cấp' : key === 'medium' ? 'Trung cấp' : 'Thấp cấp'),
+      grade: key === 'high' ? '≥10% RE₂O₃' : key === 'medium' ? '5-10% RE₂O₃' : '<5% RE₂O₃',
+      info: 'Kích thước: ' + (zone.rx * 2) + 'm × ' + (zone.rz * 2) + 'm'
+    };
+    f3Group.add(mesh);
+
+    var edges = new THREE.EdgesGeometry(geo, 20);
+    var edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+      color: zone.color, transparent: true, opacity: 0.5
+    }));
+    edgeLine.position.copy(mesh.position);
+    f3Group.add(edgeLine);
+  });
+
+  var f3Label = makeLabel('F3', '#ff3b30', 64, 200, 55);
+  f3Label.position.set(0, surfaceY + 120, 0);
+  f3Group.add(f3Label);
+
+  group.add(f3Group);
+  layers.orebody = f3Group;
+
+  // Các thân quặng phụ
+  var otherGroup = new THREE.Group();
+  OTHER_ORES.forEach(function (ore) {
+    var pts = createOreShape(ore.rx, ore.rz, ore.name.charCodeAt(1), 0.2);
+    var shape = new THREE.Shape();
+    shape.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y);
+    shape.closePath();
+
+    var geo = new THREE.ExtrudeGeometry(shape, {
+      depth: 25, bevelEnabled: true, bevelThickness: 2,
+      bevelSize: 2, bevelSegments: 1,
+      curveSegments: LOW_POWER ? 5 : 10
+    });
+    geo.rotateX(-Math.PI / 2);
+
+    var mat = new THREE.MeshStandardMaterial({
+      color: ore.color, emissive: ore.color, emissiveIntensity: 0.2,
+      transparent: true, opacity: 0.6, roughness: 0.6, metalness: 0.1,
+      side: THREE.DoubleSide
+    });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(ore.x, ore.elevation - 30, ore.z);
+    mesh.userData = {
+      type: 'ore',
+      name: ore.name,
+      grade: 'Thân quặng phụ',
+      info: 'Kích thước: ' + (ore.rx * 2) + 'm × ' + (ore.rz * 2) + 'm'
+    };
+    otherGroup.add(mesh);
+
+    var labelColor = '#' + ore.color.toString(16).padStart(6, '0');
+    var label = makeLabel(ore.name, labelColor, 48, 140, 48);
+    label.position.set(ore.x, ore.elevation + 80, ore.z);
+    otherGroup.add(label);
+  });
+
+  group.add(otherGroup);
+  layers.orebodyOther = otherGroup;
+  scene.add(group);
+}
+
+// ---------- LỖ KHOAN ----------
+function buildDrillHoles() {
+  var group = new THREE.Group();
+  var radius = LOW_POWER ? 2.5 : 1.8;
+
+  DRILL_HOLES.forEach(function (hole) {
+    var surfaceY = hole.surfaceElev;
+    var height = hole.depth;
+
+    var geo = new THREE.CylinderGeometry(radius, radius, height, LOW_POWER ? 5 : 8);
+    var mat = new THREE.MeshStandardMaterial({
+      color: hole.gradeColor,
+      emissive: hole.gradeColor,
+      emissiveIntensity: 0.55,
+      transparent: true,
+      opacity: 0.9
+    });
+    var cylinder = new THREE.Mesh(geo, mat);
+    cylinder.position.set(hole.x, surfaceY - height / 2, hole.z);
+    cylinder.userData = {
+      type: 'drill',
+      name: hole.id,
+      grade: hole.gradeLabel,
+      info: 'RE₂O₃: ' + hole.reo + '% · Sâu ' + hole.depth.toFixed(0) + 'm'
+    };
+    group.add(cylinder);
+
+    var capGeo = new THREE.SphereGeometry(radius * 1.6, 8, 8);
+    var capMat = new THREE.MeshStandardMaterial({
+      color: hole.gradeColor,
+      emissive: hole.gradeColor,
+      emissiveIntensity: 0.85
+    });
+    var cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.set(hole.x, surfaceY + 4, hole.z);
+    cap.userData = cylinder.userData;
+    group.add(cap);
+
+    var ringGeo = new THREE.RingGeometry(radius * 2.5, radius * 4, 12);
+    var ringMat = new THREE.MeshBasicMaterial({
+      color: hole.gradeColor, transparent: true,
+      opacity: 0.35, side: THREE.DoubleSide
+    });
+    var ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(hole.x, surfaceY + 0.6, hole.z);
+    group.add(ring);
+  });
+
+  layers.drill = group;
+  scene.add(group);
+}
+
+// ---------- SÔNG SUỐI ----------
+function buildRivers() {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshStandardMaterial({
+    color: CONFIG.colors.river,
+    emissive: CONFIG.colors.river,
+    emissiveIntensity: 0.3,
+    transparent: true, opacity: 0.75,
+    roughness: 0.2, metalness: 0.4
+  });
+
+  // Nậm Hon
+  var namHonPts = [
+    [-2000, -1500], [-1200, -1800], [-500, -2000],
+    [100, -2200], [800, -2000], [1500, -1700], [2200, -1400]
+  ].map(function (p) {
+    return new THREE.Vector3(p[0], getTerrainHeight(p[0], p[1]) + 2, p[1]);
+  });
+
+  var namHonCurve = new THREE.CatmullRomCurve3(namHonPts);
+  var namHonGeo = new THREE.TubeGeometry(namHonCurve, LOW_POWER ? 32 : 64, 8, 6, false);
+  var namHon = new THREE.Mesh(namHonGeo, mat);
+  namHon.userData = { type: 'river', name: 'Sông Nậm Hon', info: 'Dòng chảy chính phía Bắc' };
+  group.add(namHon);
+
+  // Đông Pao
+  var dongPaoPts = [
+    [-800, 600], [-300, 400], [100, 200],
+    [400, 100], [700, -200], [900, -600]
+  ].map(function (p) {
+    return new THREE.Vector3(p[0], getTerrainHeight(p[0], p[1]) + 2, p[1]);
+  });
+
+  var dongPaoCurve = new THREE.CatmullRomCurve3(dongPaoPts);
+  var dongPaoGeo = new THREE.TubeGeometry(dongPaoCurve, LOW_POWER ? 32 : 64, 5, 6, false);
+  var dongPao = new THREE.Mesh(dongPaoGeo, mat.clone());
+  dongPao.userData = { type: 'river', name: 'Sông Đông Pao', info: 'Chảy ngầm về phía Nam' };
+  group.add(dongPao);
+
+  layers.rivers = group;
+  scene.add(group);
+}
+
+// ---------- LƯỚI ----------
+function buildGrid() {
+  var gridHelper = new THREE.GridHelper(
+    6000, LOW_POWER ? 20 : 30,
+    CONFIG.colors.grid, CONFIG.colors.grid
+  );
+  gridHelper.position.y = 700;
+  gridHelper.material.transparent = true;
+  gridHelper.material.opacity = 0.1;
+  layers.grid = gridHelper;
+  scene.add(gridHelper);
+}
+
+// ---------- NHÃN ----------
+function makeLabel(text, color, fontSize, width, height) {
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  canvas.width = 512;
+  canvas.height = 128;
+
+  ctx.fillStyle = 'rgba(10, 14, 26, 0.78)';
+  roundRect(ctx, 10, 20, 492, 88, 16);
+  ctx.fill();
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  roundRect(ctx, 10, 20, 492, 88, 16);
+  ctx.stroke();
+
+  ctx.font = 'bold ' + fontSize + 'px -apple-system, Arial, sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 64);
+
+  var texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  var mat = new THREE.SpriteMaterial({
+    map: texture, transparent: true, depthTest: false
+  });
+  var sprite = new THREE.Sprite(mat);
+  sprite.scale.set(width, height, 1);
+  return sprite;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function buildLabels() {
+  var group = new THREE.Group();
+  var labels = [
+    { text: 'KHU VỰC DỰ ÁN ĐÔNG PAO', x: 0, z: -3000, y: 1300, color: '#4da6ff', size: 380 },
+    { text: 'Thân quặng F3', x: 0, z: 0, y: 1150, color: '#ff3b30', size: 220 },
+    { text: 'Làng Đông Pao', x: 300, z: 600, y: 1100, color: '#ffcc00', size: 200 },
+    { text: 'Làng Bản Hon', x: -800, z: -800, y: 1100, color: '#ffcc00', size: 200 }
+  ];
+
+  labels.forEach(function (l) {
+    var label = makeLabel(l.text, l.color, 64, l.size, l.size * 0.25);
+    label.position.set(l.x, l.y, l.z);
+    group.add(label);
+  });
+
+  layers.labels = group;
+  scene.add(group);
+}
+
+// ---------- TƯƠNG TÁC ----------
+var pointerDownPos = null;
+var pointerDownTime = 0;
+
+function onPointerDown(e) {
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+  pointerDownTime = Date.now();
+}
+
+function onPointerUp(e) {
+  if (!pointerDownPos) return;
+  var dx = e.clientX - pointerDownPos.x;
+  var dy = e.clientY - pointerDownPos.y;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  var dt = Date.now() - pointerDownTime;
+
+  if (dist < 10 && dt < 350) {
+    handleTap(e.clientX, e.clientY);
+  }
+  pointerDownPos = null;
+}
+
+function onPointerMove(e) {
+  if (isMobile) return;
+
+  var rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  var interactables = [];
+  if (layers.drill) interactables = interactables.concat(layers.drill.children);
+  if (layers.orebody) interactables = interactables.concat(layers.orebody.children);
+  if (layers.orebodyOther) interactables = interactables.concat(layers.orebodyOther.children);
+
+  var intersects = raycaster.intersectObjects(interactables, false);
+
+  if (intersects.length > 0) {
+    var obj = intersects[0].object;
+    if (obj.userData && obj.userData.type) {
+      if (hoveredObject && hoveredObject !== obj) resetHover();
+      hoveredObject = obj;
+      if (obj.material && obj.material.emissiveIntensity !== undefined) {
+        obj.userData._origEmissive = obj.material.emissiveIntensity;
+        obj.material.emissiveIntensity = 1.0;
+      }
+      showPopup(obj.userData, e.clientX, e.clientY);
+      renderer.domElement.style.cursor = 'pointer';
+      return;
+    }
+  }
+  resetHover();
+  hidePopup();
+  renderer.domElement.style.cursor = 'default';
+}
+
+function handleTap(clientX, clientY) {
+  var rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  var interactables = [];
+  if (layers.drill) interactables = interactables.concat(layers.drill.children);
+  if (layers.orebody) interactables = interactables.concat(layers.orebody.children);
+  if (layers.orebodyOther) interactables = interactables.concat(layers.orebodyOther.children);
+  if (layers.rivers) interactables = interactables.concat(layers.rivers.children);
+
+  var intersects = raycaster.intersectObjects(interactables, false);
+
+  if (intersects.length > 0) {
+    var obj = intersects[0].object;
+    if (obj.userData && obj.userData.type) {
+      resetHover();
+      hoveredObject = obj;
+      if (obj.material && obj.material.emissiveIntensity !== undefined) {
+        obj.userData._origEmissive = obj.material.emissiveIntensity;
+        obj.material.emissiveIntensity = 1.0;
+      }
+      showPopup(obj.userData, clientX, clientY);
+
+      if (popupTimer) clearTimeout(popupTimer);
+      popupTimer = setTimeout(function () {
+        resetHover();
+        hidePopup();
+      }, 3500);
+    }
+  } else {
+    resetHover();
+    hidePopup();
+  }
+}
+
+function resetHover() {
+  if (hoveredObject && hoveredObject.material &&
+      hoveredObject.material.emissiveIntensity !== undefined) {
+    hoveredObject.material.emissiveIntensity =
+      hoveredObject.userData._origEmissive !== undefined
+        ? hoveredObject.userData._origEmissive
+        : 0.3;
+  }
+  hoveredObject = null;
+}
+
+function showPopup(data, x, y) {
+  var popup = document.getElementById('info-popup');
+  var title = popup.querySelector('.popup-title');
+  var row = popup.querySelector('.popup-row');
+
+  title.textContent = data.name || '';
+  var html = '';
+  if (data.grade) html += '<span>' + data.grade + '</span><br>';
+  if (data.info) html += data.info;
+  row.innerHTML = html;
+
+  popup.classList.add('show');
+
+  var pw = popup.offsetWidth;
+  var ph = popup.offsetHeight;
+  var vw = window.innerWidth;
+  var vh = window.innerHeight;
+
+  var px = x + 15;
+  var py = y - ph - 15;
+
+  if (px + pw > vw - 10) px = x - pw - 15;
+  if (px < 10) px = 10;
+  if (py < 80) py = y + 20;
+  if (py + ph > vh - 100) py = vh - ph - 100;
+
+  popup.style.left = px + 'px';
+  popup.style.top = py + 'px';
+}
+
+function hidePopup() {
+  document.getElementById('info-popup').classList.remove('show');
+}
+
+// ---------- GÓC NHÌN ----------
+function setView(viewName) {
+  var surfaceY = getTerrainHeight(0, 0);
+  var targetPos, targetLook;
+
+  switch (viewName) {
+    case 'overview':
+      targetPos = new THREE.Vector3(1500, 1400, 2200);
+      targetLook = new THREE.Vector3(0, 850, -300);
+      break;
+    case 'f3':
+      targetPos = new THREE.Vector3(300, surfaceY + 320, 500);
+      targetLook = new THREE.Vector3(0, surfaceY - 60, 0);
+      break;
+    case 'cross':
+      targetPos = new THREE.Vector3(0, surfaceY + 50, 700);
+      targetLook = new THREE.Vector3(0, surfaceY - 100, 0);
+      break;
+    case 'drill':
+      targetPos = new THREE.Vector3(250, surfaceY + 180, 350);
+      targetLook = new THREE.Vector3(0, surfaceY - 100, 0);
+      break;
+    case 'top':
+      targetPos = new THREE.Vector3(0, surfaceY + 1800, 100);
+      targetLook = new THREE.Vector3(0, surfaceY, 0);
+      break;
+    default:
+      return;
+  }
+  animateCamera(targetPos, targetLook, 900);
+}
+
+function animateCamera(targetPos, targetLook, duration) {
+  if (cameraAnimRAF) cancelAnimationFrame(cameraAnimRAF);
+
+  var startPos = camera.position.clone();
+  var startLook = controls ? controls.target.clone() : new THREE.Vector3();
+  var startTime = performance.now();
+
+  function update() {
+    var elapsed = performance.now() - startTime;
+    var t = Math.min(elapsed / duration, 1);
+    var ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    camera.position.lerpVectors(startPos, targetPos, ease);
+    if (controls) controls.target.lerpVectors(startLook, targetLook, ease);
+
+    if (t < 1) {
+      cameraAnimRAF = requestAnimationFrame(update);
+    }
+  }
+  update();
+}
+
+// ---------- BẬT/TẮT LỚP ----------
+function toggleLayer(name, visible) {
+  var map = {
+    terrain: layers.terrain,
+    boundary: layers.boundary,
+    orebody: layers.orebody,
+    orebodyOther: layers.orebodyOther,
+    drill: layers.drill,
+    rivers: layers.rivers,
+    labels: layers.labels,
+    grid: layers.grid
+  };
+  var obj = map[name];
+  if (obj) obj.visible = visible;
+}
+
+// ---------- UI ----------
+function setupUI() {
+  // View buttons
+  var viewBtns = document.querySelectorAll('.view-btn');
+  Array.prototype.forEach.call(viewBtns, function (btn) {
+    btn.addEventListener('click', function () {
+      Array.prototype.forEach.call(viewBtns, function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      setView(btn.dataset.view);
+    });
+  });
+
+  // Bottom sheet
+  var sheet = document.getElementById('sheet');
+  var sheetHandle = document.getElementById('sheet-handle');
+  sheetHandle.addEventListener('click', function () {
+    sheet.classList.toggle('open');
+  });
+
+  // Tabs
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  Array.prototype.forEach.call(tabBtns, function (btn) {
+    btn.addEventListener('click', function () {
+      var tab = btn.dataset.tab;
+      Array.prototype.forEach.call(tabBtns, function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      Array.prototype.forEach.call(document.querySelectorAll('.tab-content'), function (c) {
+        c.classList.remove('active');
+      });
+      var target = document.querySelector('.tab-content[data-tab="' + tab + '"]');
+      if (target) target.classList.add('active');
+    });
+  });
+
+  // Layer panel
+  var layerPanel = document.getElementById('layer-panel');
+  function openLayers() { layerPanel.classList.add('open'); }
+  function closeLayers() { layerPanel.classList.remove('open'); }
+
+  document.getElementById('btn-layers').addEventListener('click', openLayers);
+  document.getElementById('btn-layers2').addEventListener('click', openLayers);
+  document.getElementById('btn-close-layers').addEventListener('click', closeLayers);
+  layerPanel.addEventListener('click', function (e) {
+    if (e.target === layerPanel) closeLayers();
+  });
+
+  // Layer toggles
+  var checkboxes = document.querySelectorAll('#layer-panel input[type="checkbox"]');
+  Array.prototype.forEach.call(checkboxes, function (input) {
+    input.addEventListener('change', function (e) {
+      toggleLayer(e.target.dataset.layer, e.target.checked);
+    });
+  });
+
+  // Reset
+  document.getElementById('btn-reset').addEventListener('click', function () {
+    Array.prototype.forEach.call(viewBtns, function (b) { b.classList.remove('active'); });
+    var ov = document.querySelector('.view-btn[data-view="overview"]');
+    if (ov) ov.classList.add('active');
+    setView('overview');
+  });
+
+  // Zoom
+  document.getElementById('btn-zoom-in').addEventListener('click', function () {
+    if (!controls) return;
+    var dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+    var dist = camera.position.distanceTo(controls.target);
+    var newDist = Math.max(150, dist * 0.7);
+    camera.position.copy(controls.target).addScaledVector(dir, newDist);
+  });
+
+  document.getElementById('btn-zoom-out').addEventListener('click', function () {
+    if (!controls) return;
+    var dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+    var dist = camera.position.distanceTo(controls.target);
+    var newDist = Math.min(6000, dist * 1.4);
+    camera.position.copy(controls.target).addScaledVector(dir, newDist);
+  });
+
+  // Desktop: mở sheet sẵn
+  if (!isMobile) {
+    sheet.classList.add('open');
+  }
+}
+
+// ---------- DANH SÁCH LỖ KHOAN ----------
+function populateDrillList() {
+  var list = document.getElementById('drill-list');
+  if (!list) return;
+
+  DRILL_HOLES.forEach(function (h) {
+    var row = document.createElement('div');
+    row.className = 'info-row';
+    var hex = h.gradeColor.toString(16);
+    while (hex.length < 6) hex = '0' + hex;
+    row.innerHTML =
+      '<span class="info-label">' + h.id + '</span>' +
+      '<span class="info-value" style="color:#' + hex + ';">' +
+      h.reo + '% RE₂O₃</span>';
+    list.appendChild(row);
+  });
+}
+
+// ---------- RESIZE ----------
+function onResize() {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, LOW_POWER ? 1.5 : 2));
+}
+
+// ---------- ANIMATE ----------
+function animate() {
+  requestAnimationFrame(animate);
+
+  var elapsed = clock.getElapsedTime();
+
+  if (layers.drill && !hoveredObject) {
+    var children = layers.drill.children;
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      if (child.material && child.material.emissiveIntensity !== undefined &&
+          child.userData && child.userData.type === 'drill') {
+        child.material.emissiveIntensity = 0.55 + Math.sin(elapsed * 1.5 + i * 0.3) * 0.12;
+      }
+    }
+  }
+
+  if (controls) controls.update();
+  renderer.render(scene, camera);
+}
+
+// ---------- CHẠY ----------
+try {
+  init();
+} catch (err) {
+  console.error('Lỗi khởi tạo:', err);
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('error-msg').classList.add('show');
+}
+
+})();
+</script>
+</body>
+</html>
